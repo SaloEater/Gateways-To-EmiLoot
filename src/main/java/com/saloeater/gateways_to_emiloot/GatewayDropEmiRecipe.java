@@ -6,10 +6,14 @@ import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.SlotWidget;
+import dev.emi.emi.api.widget.TextureWidget;
 import dev.emi.emi.api.widget.WidgetHolder;
 import fzzyhmstrs.emi_loot.EMILoot;
 import fzzyhmstrs.emi_loot.EMILootAgnos;
+import fzzyhmstrs.emi_loot.client.ClientResourceData;
 import fzzyhmstrs.emi_loot.emi.EmiClientPlugin;
+import fzzyhmstrs.emi_loot.util.BlockStateEmiStack;
+import fzzyhmstrs.emi_loot.util.EntityEmiStack;
 import fzzyhmstrs.emi_loot.util.LText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -17,14 +21,20 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.resources.language.I18n;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static fzzyhmstrs.emi_loot.util.FloatTrimmer.trimFloatString;
 
@@ -44,9 +54,11 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
     int maxRows = 8;
     int maxColumns = 5;
     int slotsStartY = 12;
-    int maxEntities = 5;
+    int maxEntityRows = 2;
+    int maxEntityColumns = 2;
     int entitiesX = 95;
-    int maxLootTables = 5;
+    int maxLootTableRows = 2;
+    int maxLootTableColumns = 2;
 
     public GatewayDropEmiRecipe(ItemStack gatePearl, ResourceLocation resourceLocation, GatewayDropRecipe recipe, int categoryIndex) {
         this.categoryIndex = categoryIndex;
@@ -108,41 +120,79 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
         }
 
         int y = slotsStartY;
-        var maxEntities = Math.min(entityIds.size(), this.maxEntities);
+        var maxEntities = Math.min(entityIds.size(), this.maxEntityRows * this.maxEntityColumns);
         if (!entityIds.isEmpty()) {
             widgets.addText(getFromMobText(), entitiesX, slotsStartY, 0x404040, false);
             y +=  titleHeight;
-            for (int i = 0; i < maxEntities; i++) {
-                int x = entitiesX;
-                var entity = entityIds.get(i);
-                ClickableTextWidget textWidget = new ClickableTextWidget(Component.translatable(entity.type().getDescriptionId()).withStyle(ChatFormatting.BLUE, ChatFormatting.UNDERLINE), x, y, 0x404040, false, (double mouseX, double mouseY, int button) -> {
-                    var id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.type());
-                    var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.MOB_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/entities/" + id.getPath()));
-                    if (emiRecipe == null) return;
-                    EmiApi.displayRecipe(emiRecipe);
-                });
-                widgets.add(textWidget);
-                y += titleHeight;
+            for (int row = 0; row < maxEntityRows; row++) {
+                for (int column = 0; column < maxEntityColumns; column++) {
+                    int i = row * maxEntityColumns + column;
+                    if (i >= maxEntities) break;
+                    int x = entitiesX + column * slotSize;
+                    var entity = entityIds.get(i);
+                    EntityType<?> type = entity.type();
+                    EmiIngredient entityStack = createEntitySlot(type);
+                    ClickableSlotWidget slot = new ClickableSlotWidget(entityStack, x, y, (double mouseX, double mouseY, int button) -> {
+                        var id = ForgeRegistries.ENTITY_TYPES.getKey(type);
+                        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.MOB_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/entities/" + id.getPath()));
+                        if (emiRecipe == null) return;
+                        EmiApi.displayRecipe(emiRecipe);
+                    });
+                    widgets.add(slot);
+                }
+                y += slotSize;
             }
         }
 
-        var maxLoot = Math.min(lootTables.size(), this.maxLootTables);
+        var maxLoot = Math.min(lootTables.size(), this.maxLootTableColumns * this.maxLootTableRows);
         if (!lootTables.isEmpty()) {
             widgets.addText(getFromLootText(), entitiesX, y, 0x404040, false);
             y += titleHeight;
-            for (int i = 0; i < maxLoot; i++) {
-                int x = entitiesX;
-                var lootTable = lootTables.get(i);
-                ClickableTextWidget textWidget = new ClickableTextWidget(getLootTableName(lootTable).withStyle(ChatFormatting.BLUE, ChatFormatting.UNDERLINE), x, y, 0x404040, false, (double mouseX, double mouseY, int button) -> {
-                    var id = lootTable.lootTableId();
-                    var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.LOOT_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
-                    if (emiRecipe == null) return;
-                    EmiApi.displayRecipe(emiRecipe);
-                });
-                widgets.add(textWidget);
-                y += titleHeight;
+            for (int row = 0; row < maxLootTableRows; row++) {
+                for (int column = 0; column < maxLootTableColumns; column++) {
+                    int i = row * maxLootTableColumns + column;
+                    if (i >= maxLoot) break;
+                    int x = entitiesX + column * slotSize;
+                    var lootTable = lootTables.get(i);
+                    ItemStack chestSlot = new ItemStack(Items.CHEST);
+                    chestSlot.setHoverName(getLootTableName(lootTable));
+                    EmiIngredient slot = BlockStateEmiStack.of(chestSlot);
+                    ClickableSlotWidget slotWidget = new ClickableSlotWidget(slot, x, y, (double mouseX, double mouseY, int button) -> {
+                        var id = lootTable.lootTableId();
+                        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.LOOT_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
+                        if (emiRecipe == null) return;
+                        EmiApi.displayRecipe(emiRecipe);
+                    });
+
+                    widgets.add(slotWidget);
+                }
+                y += slotSize;
             }
         }
+    }
+
+    private EmiIngredient createEntitySlot(EntityType<?> type) {
+        Minecraft client = Minecraft.getInstance();
+        Entity entity = type.create(client.level);
+        EmiStack inputStack;
+        if (entity != null) {
+            var box = entity.getBoundingBox();
+            double len = box.getSize();
+            if (len > 1.05) {
+                len = (len + Math.sqrt(len))/2.0;
+            }
+            if (entity instanceof Slime) {
+                ((Slime)entity).setSize(5, false);
+            }
+            double scale = 1.05 / len * 8;
+            if (ClientResourceData.MOB_SCALES.containsKey(type)) {
+                scale *= ClientResourceData.MOB_SCALES.getOrDefault(type, 1.0f);
+            }
+            inputStack = EntityEmiStack.ofScaled(entity, scale);
+        } else {
+            inputStack = EmiStack.EMPTY;
+        }
+        return inputStack;
     }
 
     private MutableComponent getLootTableName(GatewayDropRecipe.LootTableReward lootTable) {
@@ -191,5 +241,10 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
 
     private int centeredTextX(Component text) {
         return centeredTextX(text,  0, getDisplayWidth());
+    }
+
+    @Override
+    public boolean supportsRecipeTree() {
+        return false;
     }
 }
