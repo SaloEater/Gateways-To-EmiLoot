@@ -25,9 +25,9 @@ public class GatewayDropRecipe {
         this.waveIndex = i;
         rewards.forEach(reward -> {
             if (reward instanceof Reward.ChancedReward chancedReward) {
-                addReward(chancedReward.reward(), chancedReward.chance());
+                addReward(chancedReward.reward(), chancedReward.chance() * 100);
             } else {
-                addReward(reward, 1);
+                addReward(reward, 100);
             }
         });
         entities.forEach(entity -> {
