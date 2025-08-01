@@ -158,11 +158,11 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
                 int x = entitiesX + column * slotSize;
                 var entityType = entityRewards.type();
                 EmiIngredient entityStack = createEntitySlot(entityType);
-                ClickableSlotWidget slot = new ClickableSlotWidget(entityStack, x, y, (double mouseX, double mouseY, int button) -> {
+                var slot = new ClickableSlotWidget(entityStack, x, y, (double mouseX, double mouseY, int button) -> {
                     if (button == 1) {
                         showMobLoot(entityType);
                     }
-                });
+                }).appendTooltip(LText.translatable("emi_loot.percentage", trimFloatString(entityRewards.chance())));
                 widgets.add(slot);
                 column++;
             }
@@ -185,11 +185,11 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
                 var chestSlot = new ItemStack(Items.CHEST);
                 chestSlot.setHoverName(getLootTableName(lootTable));
                 EmiIngredient slot = BlockStateEmiStack.of(chestSlot);
-                ClickableSlotWidget slotWidget = new ClickableSlotWidget(slot, x, y, (double mouseX, double mouseY, int button) -> {
+                var slotWidget = new ClickableSlotWidget(slot, x, y, (double mouseX, double mouseY, int button) -> {
                     if (button == 1) {
                         showChestLoot(lootTable.lootTableId());
                     }
-                });
+                }).appendTooltip(LText.translatable("emi_loot.percentage", trimFloatString(lootTable.chance())));
                 widgets.add(slotWidget);
                 column++;
             }
