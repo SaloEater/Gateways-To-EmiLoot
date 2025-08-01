@@ -4,6 +4,7 @@ import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.widget.ButtonWidget;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.TextWidget;
+import dev.emi.emi.config.EmiConfig;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.MutableComponent;
@@ -21,19 +22,36 @@ public class ClickableSlotWidget extends SlotWidget {
 
     @Override
     public boolean mouseClicked(int mouseX, int mouseY, int button) {
-        action.click(mouseX, mouseY, button);
+        action.click(mouseX, mouseY, buttonToButton(button));
         return false;
-        //return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        action.click(0, 0, keyCodeToButton(keyCode));
+        action.click(0, 0, keyCodeToButton(keyCode, scanCode));
         return false;
     }
 
-    private int keyCodeToButton(int keyCode) {
-        return keyCode == KeyEvent.VK_U ? 1 : (keyCode == KeyEvent.VK_R ? 0 : -1);
+    private int keyCodeToButton(int keyCode, int scanCode) {
+        if (EmiConfig.viewRecipes.matchesKey(keyCode, scanCode)) {
+            return 0;
+        }
+
+        if (EmiConfig.viewUses.matchesKey(keyCode, scanCode)) {
+            return 1;
+        }
+        return -1;
+    }
+
+    private int buttonToButton(int button) {
+        if (EmiConfig.viewRecipes.matchesMouse(button)) {
+            return 0;
+        }
+
+        if (EmiConfig.viewUses.matchesMouse(button)) {
+            return 1;
+        }
+        return -1;
     }
 
     @Override
