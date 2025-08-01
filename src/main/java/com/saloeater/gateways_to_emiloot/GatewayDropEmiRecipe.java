@@ -6,7 +6,6 @@ import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.SlotWidget;
-import dev.emi.emi.api.widget.TextureWidget;
 import dev.emi.emi.api.widget.WidgetHolder;
 import fzzyhmstrs.emi_loot.EMILoot;
 import fzzyhmstrs.emi_loot.EMILootAgnos;
@@ -15,9 +14,7 @@ import fzzyhmstrs.emi_loot.emi.EmiClientPlugin;
 import fzzyhmstrs.emi_loot.util.BlockStateEmiStack;
 import fzzyhmstrs.emi_loot.util.EntityEmiStack;
 import fzzyhmstrs.emi_loot.util.LText;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -34,7 +31,6 @@ import net.minecraft.client.resources.language.I18n;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static fzzyhmstrs.emi_loot.util.FloatTrimmer.trimFloatString;
 
@@ -43,7 +39,8 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
     String path;
     int waveIndex;
     ItemStack gatePearl;
-    List<EmiStack> outputStacks;
+    List<EmiStack> stacks;
+    List<EmiStack> outputs;
     List<Float> chances;
     List<GatewayDropRecipe.EntityReward> entityIds;
     List<GatewayDropRecipe.LootTableReward> lootTables;
@@ -65,15 +62,30 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
         this.path = resourceLocation.getPath();
         this.waveIndex = recipe.waveIndex;
         this.gatePearl = gatePearl.copy();
-        outputStacks = new ArrayList<>();
+        stacks = new ArrayList<>();
         chances = new ArrayList<>();
         recipe.stacks.forEach(stack -> {
-            outputStacks.add(EmiStack.of(stack.stack()));
+            stacks.add(EmiStack.of(stack.stack()));
             chances.add(stack.chance());
         });
+        outputs = new ArrayList<>(stacks);
         this.name = gatePearl.getHoverName();
         this.entityIds = recipe.entityIds;
+        this.entityIds.forEach(entityId -> {
+            //minecraft:entities/zombified_piglin
+            outputs.add(new MobEmiStack(toEmiMobLootFormat(ForgeRegistries.ENTITY_TYPES.getKey(entityId.type()))));
+        });
         this.lootTables = recipe.lootTableRewards;
+        this.lootTables.forEach(lootTable -> {
+            outputs.add(new LootEmiStack(lootTable.lootTableId().toString()));
+        });
+    }
+
+    private String toEmiMobLootFormat(@Nullable ResourceLocation key) {
+        if (key == null) {
+            return "";
+        }
+        return ResourceLocation.fromNamespaceAndPath(key.getNamespace(), "entities/" + key.getPath()).toString();
     }
 
     @Override
@@ -93,7 +105,7 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
 
     @Override
     public List<EmiStack> getOutputs() {
-        return outputStacks;
+        return outputs;
     }
 
     @Override
@@ -110,12 +122,12 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
     public void addWidgets(WidgetHolder widgets) {
         var waveText = getWaveText();
         widgets.addText(waveText, centeredTextX(waveText), 0, 0x404040, false);
-        var maxSlots = Math.min(outputStacks.size(), maxRows * maxColumns);
+        var maxSlots = Math.min(stacks.size(), maxRows * maxColumns);
         for (int i = 0; i < maxSlots; i++) {
             int x = (i % maxColumns) * slotSize;
             int y = slotsStartY + (i / maxColumns) * slotSize;
             String fTrim = trimFloatString(chances.get(i));
-            var slot = new SlotWidget(outputStacks.get(i), x, y);
+            var slot = new SlotWidget(stacks.get(i), x, y);
             widgets.add(slot.appendTooltip(LText.translatable("emi_loot.percentage", fTrim)));
         }
 
@@ -133,10 +145,12 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
                     EntityType<?> type = entity.type();
                     EmiIngredient entityStack = createEntitySlot(type);
                     ClickableSlotWidget slot = new ClickableSlotWidget(entityStack, x, y, (double mouseX, double mouseY, int button) -> {
-                        var id = ForgeRegistries.ENTITY_TYPES.getKey(type);
-                        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.MOB_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/entities/" + id.getPath()));
-                        if (emiRecipe == null) return;
-                        EmiApi.displayRecipe(emiRecipe);
+                        if (button == 1) {
+                            var id = ForgeRegistries.ENTITY_TYPES.getKey(type);
+                            var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.MOB_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/entities/" + id.getPath()));
+                            if (emiRecipe == null) return;
+                            EmiApi.displayRecipe(emiRecipe);
+                        }
                     });
                     widgets.add(slot);
                 }
@@ -158,10 +172,12 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
                     chestSlot.setHoverName(getLootTableName(lootTable));
                     EmiIngredient slot = BlockStateEmiStack.of(chestSlot);
                     ClickableSlotWidget slotWidget = new ClickableSlotWidget(slot, x, y, (double mouseX, double mouseY, int button) -> {
-                        var id = lootTable.lootTableId();
-                        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.CHEST_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
-                        if (emiRecipe == null) return;
-                        EmiApi.displayRecipe(emiRecipe);
+                        if (button == 1) {
+                            var id = lootTable.lootTableId();
+                            var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.CHEST_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
+                            if (emiRecipe == null) return;
+                            EmiApi.displayRecipe(emiRecipe);
+                        }
                     });
 
                     widgets.add(slotWidget);
@@ -222,10 +238,6 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
             } else {
                 Component unknown = LText.translatable("emi_loot.chest.unknown");
                 rawTitle = LText.translatable("emi_loot.chest.unknown_chest", LText.literal(chestName.toString()).append(" ").append(unknown));
-            }
-
-            if (EMILoot.config.isLogI18n(EMILoot.Type.CHEST)) {
-                EMILoot.LOGGER.warn("Untranslated chest loot table \"{}\" (key: \"{}\")", id, key);
             }
         } else {
             rawTitle = LText.translatable(key);

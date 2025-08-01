@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.saloeater.gateways_to_emiloot.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "ChestLootRecipeMixin",
+    "MobLootRecipeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
