@@ -14,6 +14,7 @@ import fzzyhmstrs.emi_loot.emi.EmiClientPlugin;
 import fzzyhmstrs.emi_loot.util.BlockStateEmiStack;
 import fzzyhmstrs.emi_loot.util.EntityEmiStack;
 import fzzyhmstrs.emi_loot.util.LText;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -44,18 +45,18 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
     List<Float> chances;
     List<GatewayDropRecipe.EntityReward> entityIds;
     List<GatewayDropRecipe.LootTableReward> lootTables;
+    List<GatewayDropRecipe.EntityWithCount> spawns;
     Component name;
 
     int titleHeight = 11;
     int slotSize = 18;
-    int maxRows = 8;
-    int maxColumns = 5;
+    int itemColumns = 5;
     int slotsStartY = 12;
-    int maxEntityRows = 2;
-    int maxEntityColumns = 2;
+    int entityColumns = 2;
     int entitiesX = 95;
-    int maxLootTableRows = 2;
-    int maxLootTableColumns = 2;
+    int lootTableColumns = 2;
+    int spawnColumns = 8;
+    int height;
 
     public GatewayDropEmiRecipe(ItemStack gatePearl, ResourceLocation resourceLocation, GatewayDropRecipe recipe, int categoryIndex) {
         this.categoryIndex = categoryIndex;
@@ -72,13 +73,18 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
         this.name = gatePearl.getHoverName();
         this.entityIds = recipe.entityIds;
         this.entityIds.forEach(entityId -> {
-            //minecraft:entities/zombified_piglin
             outputs.add(new MobEmiStack(toEmiMobLootFormat(ForgeRegistries.ENTITY_TYPES.getKey(entityId.type()))));
         });
         this.lootTables = recipe.lootTableRewards;
         this.lootTables.forEach(lootTable -> {
             outputs.add(new LootEmiStack(lootTable.lootTableId().toString()));
         });
+        spawns = recipe.entityWithCounts;
+        spawns.forEach(entityWithCount -> {
+            outputs.add(new MobEmiStack(toEmiMobLootFormat(ForgeRegistries.ENTITY_TYPES.getKey(entityWithCount.type()))));
+        });
+
+        height = titleHeight + Math.max(stacks.size() / itemColumns, 2 * titleHeight + lootTables.size() / lootTableColumns + entityIds.size() / entityColumns) * slotSize;
     }
 
     private String toEmiMobLootFormat(@Nullable ResourceLocation key) {
@@ -115,76 +121,119 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
 
     @Override
     public int getDisplayHeight() {
-        return titleHeight + slotSize * maxRows;
+        return height;
     }
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
         var waveText = getWaveText();
         widgets.addText(waveText, centeredTextX(waveText), 0, 0x404040, false);
-        var maxSlots = Math.min(stacks.size(), maxRows * maxColumns);
-        for (int i = 0; i < maxSlots; i++) {
-            int x = (i % maxColumns) * slotSize;
-            int y = slotsStartY + (i / maxColumns) * slotSize;
-            String fTrim = trimFloatString(chances.get(i));
-            var slot = new SlotWidget(stacks.get(i), x, y);
-            widgets.add(slot.appendTooltip(LText.translatable("emi_loot.percentage", fTrim)));
+
+        int row = 0;
+        int column = 0;
+        for (EmiStack stack : stacks) {
+            if (column == itemColumns) {
+                row++;
+                column = 0;
+            }
+            int x = column * slotSize;
+            int y = slotsStartY + row * slotSize;
+            var slot = new SlotWidget(stack, x, y);
+            widgets.add(slot.appendTooltip(LText.translatable("emi_loot.percentage", trimFloatString(chances.get(column)))));
+            column++;
         }
 
         int y = slotsStartY;
-        var maxEntities = Math.min(entityIds.size(), this.maxEntityRows * this.maxEntityColumns);
         if (!entityIds.isEmpty()) {
             widgets.addText(getFromMobText(), entitiesX, slotsStartY, 0x404040, false);
             y +=  titleHeight;
-            for (int row = 0; row < maxEntityRows; row++) {
-                for (int column = 0; column < maxEntityColumns; column++) {
-                    int i = row * maxEntityColumns + column;
-                    if (i >= maxEntities) break;
-                    int x = entitiesX + column * slotSize;
-                    var entity = entityIds.get(i);
-                    EntityType<?> type = entity.type();
-                    EmiIngredient entityStack = createEntitySlot(type);
-                    ClickableSlotWidget slot = new ClickableSlotWidget(entityStack, x, y, (double mouseX, double mouseY, int button) -> {
-                        if (button == 1) {
-                            var id = ForgeRegistries.ENTITY_TYPES.getKey(type);
-                            var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.MOB_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/entities/" + id.getPath()));
-                            if (emiRecipe == null) return;
-                            EmiApi.displayRecipe(emiRecipe);
-                        }
-                    });
-                    widgets.add(slot);
+            row = 0;
+            column = 0;
+            for (var entityRewards : entityIds) {
+                if (column == entityColumns) {
+                    row++;
+                    column = 0;
+                    y += slotSize;
                 }
-                y += slotSize;
+                int x = entitiesX + column * slotSize;
+                var entityType = entityRewards.type();
+                EmiIngredient entityStack = createEntitySlot(entityType);
+                ClickableSlotWidget slot = new ClickableSlotWidget(entityStack, x, y, (double mouseX, double mouseY, int button) -> {
+                    if (button == 1) {
+                        showMobLoot(entityType);
+                    }
+                });
+                widgets.add(slot);
+                column++;
             }
+            y += slotSize;
         }
 
-        var maxLoot = Math.min(lootTables.size(), this.maxLootTableColumns * this.maxLootTableRows);
         if (!lootTables.isEmpty()) {
             widgets.addText(getFromLootText(), entitiesX, y, 0x404040, false);
             y += titleHeight;
-            for (int row = 0; row < maxLootTableRows; row++) {
-                for (int column = 0; column < maxLootTableColumns; column++) {
-                    int i = row * maxLootTableColumns + column;
-                    if (i >= maxLoot) break;
-                    int x = entitiesX + column * slotSize;
-                    var lootTable = lootTables.get(i);
-                    ItemStack chestSlot = new ItemStack(Items.CHEST);
-                    chestSlot.setHoverName(getLootTableName(lootTable));
-                    EmiIngredient slot = BlockStateEmiStack.of(chestSlot);
-                    ClickableSlotWidget slotWidget = new ClickableSlotWidget(slot, x, y, (double mouseX, double mouseY, int button) -> {
-                        if (button == 1) {
-                            var id = lootTable.lootTableId();
-                            var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.CHEST_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
-                            if (emiRecipe == null) return;
-                            EmiApi.displayRecipe(emiRecipe);
-                        }
-                    });
+            row = 0;
+            column = 0;
 
-                    widgets.add(slotWidget);
+            for (var lootTable : lootTables) {
+                if (column == lootTableColumns) {
+                    row++;
+                    column = 0;
+                    y += slotSize;
                 }
-                y += slotSize;
+                int x = entitiesX+ column * slotSize;
+                var chestSlot = new ItemStack(Items.CHEST);
+                chestSlot.setHoverName(getLootTableName(lootTable));
+                EmiIngredient slot = BlockStateEmiStack.of(chestSlot);
+                ClickableSlotWidget slotWidget = new ClickableSlotWidget(slot, x, y, (double mouseX, double mouseY, int button) -> {
+                    if (button == 1) {
+                        showChestLoot(lootTable.lootTableId());
+                    }
+                });
+                widgets.add(slotWidget);
+                column++;
+            }
+            y += slotSize;
+        }
+
+        if (!spawns.isEmpty()) {
+            y = (int) Math.max(y, slotsStartY + Math.ceil((double) stacks.size() / itemColumns));
+            widgets.addText(Component.translatable("gateways_to_emiloot.spawns"), 0, y, 0x404040, false);
+            y += titleHeight;
+            row = 0;
+            column = 0;
+
+            for (var entityWithCount : spawns) {
+                if (column == spawnColumns) {
+                    row++;
+                    column = 0;
+                    y += slotSize;
+                }
+                int x = column * slotSize;
+                EmiIngredient entityStack = createEntitySlot(entityWithCount.type());
+                ClickableSlotWidget slot = new ClickableSlotWidget(entityStack, x, y, (double mouseX, double mouseY, int button) -> {
+                    if (button == 1) {
+                        showMobLoot(entityWithCount.type());
+                    }
+                });
+                widgets.add(slot);
+                widgets.addText(Component.literal(String.valueOf(entityWithCount.count())), x + 1, y + 1, 0xBD2A0A, false);
+                column++;
             }
         }
+    }
+
+    private static void showChestLoot(ResourceLocation id) {
+        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.CHEST_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
+        if (emiRecipe == null) return;
+        EmiApi.displayRecipe(emiRecipe);
+    }
+
+    private static void showMobLoot(EntityType<?> type) {
+        var id = ForgeRegistries.ENTITY_TYPES.getKey(type);
+        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.MOB_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/entities/" + id.getPath()));
+        if (emiRecipe == null) return;
+        EmiApi.displayRecipe(emiRecipe);
     }
 
     private EmiIngredient createEntitySlot(EntityType<?> type) {

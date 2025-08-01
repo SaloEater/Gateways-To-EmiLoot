@@ -1,6 +1,7 @@
 package com.saloeater.gateways_to_emiloot;
 
 import dev.shadowsoffire.gateways.gate.Reward;
+import dev.shadowsoffire.gateways.gate.WaveEntity;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
@@ -14,18 +15,24 @@ public class GatewayDropRecipe {
     public List<ItemStackReward> stacks = new ArrayList<>();
     public List<EntityReward> entityIds = new ArrayList<>();
     public List<LootTableReward> lootTableRewards = new ArrayList<>();
+    public List<EntityWithCount> entityWithCounts = new ArrayList<>();
 
     public GatewayDropRecipe(List<Reward> rewards) {
-        this(rewards, FINAL);
+        this(rewards, new ArrayList<>(), FINAL);
     }
 
-    public GatewayDropRecipe(List<Reward> rewards, int i) {
+    public GatewayDropRecipe(List<Reward> rewards, List<WaveEntity> entities, int i) {
         this.waveIndex = i;
         rewards.forEach(reward -> {
             if (reward instanceof Reward.ChancedReward chancedReward) {
                 addReward(chancedReward.reward(), chancedReward.chance());
             } else {
                 addReward(reward, 1);
+            }
+        });
+        entities.forEach(entity -> {
+            if (entity instanceof WaveEntity.StandardWaveEntity standardEntity && entity instanceof TypeAccessor typeAccessor) {
+                this.entityWithCounts.add(new EntityWithCount(typeAccessor.getType(), standardEntity.getCount()));
             }
         });
     }
@@ -62,7 +69,7 @@ public class GatewayDropRecipe {
 
     public record LootTableReward(ResourceLocation lootTableId, int rolls, float chance) { }
 
-    public record ItemStackReward(ItemStack stack, float chance) {
+    public record ItemStackReward(ItemStack stack, float chance) { }
 
-    }
+    public record EntityWithCount(EntityType<?> type, int count) { }
 }

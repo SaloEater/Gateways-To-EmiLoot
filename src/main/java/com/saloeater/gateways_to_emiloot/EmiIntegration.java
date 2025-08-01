@@ -36,7 +36,7 @@ public class EmiIntegration implements EmiPlugin {
                     var wave = normalGateway.waves().get(i);
                     List<Reward> rewards = wave.rewards();
                     if (isRewardsEmpty(rewards)) continue;
-                    emiRegistry.addRecipe(new GatewayDropEmiRecipe(gatePearl, resourceLocation, new GatewayDropRecipe(rewards, i + 1), categoryIndex));
+                    emiRegistry.addRecipe(new GatewayDropEmiRecipe(gatePearl, resourceLocation, new GatewayDropRecipe(rewards, wave.entities(), i + 1), categoryIndex));
                 }
                 if (isRewardsEmpty(normalGateway.rewards())) return;
                 emiRegistry.addRecipe(new GatewayDropEmiRecipe(gatePearl, resourceLocation, new GatewayDropRecipe(normalGateway.rewards()), categoryIndex));
@@ -44,7 +44,7 @@ public class EmiIntegration implements EmiPlugin {
                 var gatePearl = registerGatewayCategory(emiRegistry, resourceLocation, gate);
                 int categoryIndex = categories.size() - 1;
                 if (isRewardsEmpty(endlessGateway.baseWave().rewards())) return;
-                emiRegistry.addRecipe(new GatewayDropEmiRecipe(gatePearl, resourceLocation, new GatewayDropRecipe(endlessGateway.baseWave().rewards()), categoryIndex));
+                emiRegistry.addRecipe(new GatewayDropEmiRecipe(gatePearl, resourceLocation, new GatewayDropRecipe(endlessGateway.baseWave().rewards(), endlessGateway.baseWave().entities(), GatewayDropRecipe.FINAL), categoryIndex));
             }
         });
     }
