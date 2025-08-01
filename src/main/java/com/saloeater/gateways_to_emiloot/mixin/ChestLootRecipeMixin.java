@@ -58,7 +58,7 @@ public abstract class ChestLootRecipeMixin {
         at = @At("RETURN")
     )
     public void addWidgets(WidgetHolder widgets, CallbackInfo ci) {
-        ClickableTextWidget textWidget = new ClickableTextWidget(this.title.title(), 1, 0, 0x404040, false, (double mouseX, double mouseY, int button) -> {
+        ClickableTextWidget textWidget = new ClickableTextWidget(this.title.rawTitle().plainCopy().withStyle(ChatFormatting.BLUE, ChatFormatting.UNDERLINE).getVisualOrderText(), 1, 0, 0x404040, false, (double mouseX, double mouseY, int button) -> {
             if (button == 0) {
                 EmiApi.displayRecipes(new LootEmiStack(loot.getId().toString()));
             }
