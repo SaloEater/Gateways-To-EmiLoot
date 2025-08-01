@@ -132,7 +132,7 @@ dependencies {
 
     implementation fg.deobf("dev.shadowsoffire:GatewaysToEternity:${minecraft_version}-${gateways_to_eternity_version}")
     implementation fg.deobf("dev.shadowsoffire:Placebo:${minecraft_version}-${placeboVersion}")
-    //implementation fg.deobf("curse.maven:${emiloot_descriptor}-${emiloot_project_id}:${emiloot_file_id}")
+    implementation fg.deobf("curse.maven:${emiloot_descriptor}-${emiloot_project_id}:${emiloot_file_id}")
     implementation files("libs/emi_loot-0.7.1+1.20.1+forge.jar")
 
     compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}+${minecraft_version}:api")

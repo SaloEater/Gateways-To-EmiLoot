@@ -159,7 +159,7 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
                     EmiIngredient slot = BlockStateEmiStack.of(chestSlot);
                     ClickableSlotWidget slotWidget = new ClickableSlotWidget(slot, x, y, (double mouseX, double mouseY, int button) -> {
                         var id = lootTable.lootTableId();
-                        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.LOOT_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
+                        var emiRecipe = EmiApi.getRecipeManager().getRecipe(ResourceLocation.fromNamespaceAndPath(EMILoot.MOD_ID, "/" + EmiClientPlugin.CHEST_CATEGORY.getId().getPath() + "/" + id.getNamespace() + "/" + id.getPath()));
                         if (emiRecipe == null) return;
                         EmiApi.displayRecipe(emiRecipe);
                     });
@@ -198,18 +198,37 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
     private MutableComponent getLootTableName(GatewayDropRecipe.LootTableReward lootTable) {
         ResourceLocation id = lootTable.lootTableId();
         String key = "emi_loot.chest." + id.toString();
-        MutableComponent text = LText.translatable(key);
         MutableComponent rawTitle;
         if (!I18n.exists(key)) {
-            if(EMILootAgnos.isModLoaded(id.getNamespace())) {
-                String modName = EMILootAgnos.getModName(id.getNamespace());
-                rawTitle = LText.translatable("emi_loot.chest.unknown_chest", modName);
+            StringBuilder chestName = new StringBuilder();
+            String[] chestPathTokens = id.getPath().split("[/_]");
+
+            for(String str : chestPathTokens) {
+                if (!LText.tablePrefixes.contains(str)) {
+                    if (!chestName.isEmpty()) {
+                        chestName.append(" ");
+                    }
+
+                    if (str.length() <= 1) {
+                        chestName.append(str);
+                    } else {
+                        chestName.append(str.substring(0, 1).toUpperCase()).append(str.substring(1));
+                    }
+                }
+            }
+
+            if (EMILootAgnos.isModLoaded(id.getNamespace())) {
+                rawTitle = LText.translatable("emi_loot.chest.unknown_chest", chestName.toString());
             } else {
-                var unknown = LText.translatable("emi_loot.chest.unknown");
-                rawTitle = LText.translatable("emi_loot.chest.unknown_chest", unknown.getString());
+                Component unknown = LText.translatable("emi_loot.chest.unknown");
+                rawTitle = LText.translatable("emi_loot.chest.unknown_chest", LText.literal(chestName.toString()).append(" ").append(unknown));
+            }
+
+            if (EMILoot.config.isLogI18n(EMILoot.Type.CHEST)) {
+                EMILoot.LOGGER.warn("Untranslated chest loot table \"{}\" (key: \"{}\")", id, key);
             }
         } else {
-            rawTitle = text;
+            rawTitle = LText.translatable(key);
         }
 
         return rawTitle;
