@@ -1,7 +1,8 @@
 {
   "gateways_to_emiloot.wave": "Wave %s",
-  "gateways_to_emiloot.from_mob": "From mob:",
-  "gateways_to_emiloot.from_loot": "From loot:",
+  "gateways_to_emiloot.word.rewards": "Rewards",
+  "gateways_to_emiloot.word.from": "from:",
   "gateways_to_emiloot.final": "Completion Reward",
-  "gateways_to_emiloot.spawns": "Spawns:"
+  "gateways_to_emiloot.spawns": "Spawns:",
+  "gateways_to_emiloot.endless_wave": "Endless Wave"
 }

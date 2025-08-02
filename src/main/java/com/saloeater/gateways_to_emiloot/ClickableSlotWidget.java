@@ -7,10 +7,14 @@ import dev.emi.emi.api.widget.TextWidget;
 import dev.emi.emi.config.EmiConfig;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraftforge.forgespi.Environment;
 
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClickableSlotWidget extends SlotWidget {
     protected final ButtonWidget.ClickAction action;
@@ -57,5 +61,20 @@ public class ClickableSlotWidget extends SlotWidget {
     @Override
     public void render(GuiGraphics draw, int mouseX, int mouseY, float delta) {
         super.render(draw, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public List<ClientTooltipComponent> getTooltip(int mouseX, int mouseY) {
+        var tooltipOld = super.getTooltip(mouseX, mouseY);
+        List<ClientTooltipComponent> tooltip = new ArrayList<>();
+        tooltip.add(tooltipOld.get(0));
+        tooltip.add(tooltipOld.get(2));
+        return tooltip;
+    }
+
+    @Override
+    public ClickableSlotWidget appendTooltip(Component text) {
+        super.appendTooltip(text);
+        return this;
     }
 }

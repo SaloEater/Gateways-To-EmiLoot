@@ -63,12 +63,14 @@ public abstract class MobLootRecipeMixin {
             x = 30;
         }
 
+        MobEmiStack input = new MobEmiStack(lootId.toString());
+        var recipes = EmiApi.getRecipeManager().getRecipesByOutput(input);
+        if (recipes.isEmpty()) {
+            return;
+        }
         ClickableTextWidget textWidget = new ClickableTextWidget(this.name.rawTitle().plainCopy().withStyle(ChatFormatting.BLUE, ChatFormatting.UNDERLINE).getVisualOrderText(), x, 0, 4210752, false, (double mouseX, double mouseY, int button) -> {
             if (button == 0) {
-                var r1 = EmiApi.getRecipeManager().getRecipesByOutput(new MobEmiStack(lootId.toString()));
-                var r2 = EmiApi.getRecipeManager().getRecipes(EmiIntegration.categories.stream().filter(i -> i.getId().toString().contains("hell")).findFirst().get());
-                var recipes = EmiApi.getRecipeManager();
-                EmiApi.displayRecipes(new MobEmiStack(lootId.toString()));
+                EmiApi.displayRecipes(input);
             }
         });
         widgets.add(textWidget);

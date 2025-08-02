@@ -44,7 +44,7 @@ public class EmiIntegration implements EmiPlugin {
                 var gatePearl = registerGatewayCategory(emiRegistry, resourceLocation, gate);
                 int categoryIndex = categories.size() - 1;
                 if (isRewardsEmpty(endlessGateway.baseWave().rewards())) return;
-                emiRegistry.addRecipe(new GatewayDropEmiRecipe(gatePearl, resourceLocation, new GatewayDropRecipe(endlessGateway.baseWave().rewards(), endlessGateway.baseWave().entities(), GatewayDropRecipe.FINAL), categoryIndex));
+                emiRegistry.addRecipe(new GatewayDropEmiRecipe(gatePearl, resourceLocation, new GatewayDropRecipe(endlessGateway.baseWave().rewards(), endlessGateway.baseWave().entities(), GatewayDropRecipe.ENDLESS), categoryIndex));
             }
         });
     }

@@ -14,7 +14,6 @@ import fzzyhmstrs.emi_loot.emi.EmiClientPlugin;
 import fzzyhmstrs.emi_loot.util.BlockStateEmiStack;
 import fzzyhmstrs.emi_loot.util.EntityEmiStack;
 import fzzyhmstrs.emi_loot.util.LText;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -84,7 +83,10 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
             outputs.add(new MobEmiStack(toEmiMobLootFormat(ForgeRegistries.ENTITY_TYPES.getKey(entityWithCount.type()))));
         });
 
-        height = titleHeight + Math.max(stacks.size() / itemColumns, 2 * titleHeight + lootTables.size() / lootTableColumns + entityIds.size() / entityColumns) * slotSize;
+        int slotsHeight = (stacks.size() / itemColumns) * slotSize;
+        int rewardsHeight = 2 * titleHeight + (int)(Math.ceil((double) lootTables.size() / lootTableColumns) + (int)Math.ceil((double) entityIds.size() / entityColumns)) * slotSize;
+        int spawnsHeight = titleHeight + (int) Math.ceil((double) spawns.size() / spawnColumns) * slotSize;
+        height = titleHeight + Math.max(slotsHeight, rewardsHeight) + spawnsHeight;
     }
 
     private String toEmiMobLootFormat(@Nullable ResourceLocation key) {
@@ -144,9 +146,14 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
         }
 
         int y = slotsStartY;
-        if (!entityIds.isEmpty()) {
-            widgets.addText(getFromMobText(), entitiesX, slotsStartY, 0x404040, false);
+        if (!entityIds.isEmpty() ||  !lootTables.isEmpty()) {
+            widgets.addText(getRewardsText(), entitiesX, y, 0x404040, false);
             y +=  titleHeight;
+            widgets.addText(getFromText(), entitiesX, y, 0x404040, false);
+            y +=  titleHeight;
+        }
+
+        if (!entityIds.isEmpty()) {
             row = 0;
             column = 0;
             for (var entityRewards : entityIds) {
@@ -170,8 +177,6 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
         }
 
         if (!lootTables.isEmpty()) {
-            widgets.addText(getFromLootText(), entitiesX, y, 0x404040, false);
-            y += titleHeight;
             row = 0;
             column = 0;
 
@@ -295,17 +300,20 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
         return rawTitle;
     }
 
-    private Component getFromMobText() {
-        return Component.translatable("gateways_to_emiloot.from_mob");
-    }
 
-    private Component getFromLootText() {
-        return Component.translatable("gateways_to_emiloot.from_loot");
+    private Component getRewardsText() {
+        return Component.translatable("gateways_to_emiloot.word.rewards");
+    }
+    private Component getFromText() {
+        return Component.translatable("gateways_to_emiloot.word.from");
     }
 
     private @NotNull MutableComponent getWaveText() {
         if (waveIndex == GatewayDropRecipe.FINAL) {
             return Component.translatable("gateways_to_emiloot.final");
+        }
+        if (waveIndex == GatewayDropRecipe.ENDLESS) {
+            return Component.translatable("gateways_to_emiloot.endless_wave");
         }
         return Component.translatable("gateways_to_emiloot.wave", waveIndex);
     }

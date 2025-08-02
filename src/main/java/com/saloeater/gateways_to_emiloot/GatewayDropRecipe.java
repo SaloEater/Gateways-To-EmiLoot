@@ -11,6 +11,7 @@ import java.util.List;
 
 public class GatewayDropRecipe {
     public static final int FINAL = -1;
+    public static final int ENDLESS = -2;
     public int waveIndex;
     public List<ItemStackReward> stacks = new ArrayList<>();
     public List<EntityReward> entityIds = new ArrayList<>();
