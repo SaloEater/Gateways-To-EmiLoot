@@ -197,7 +197,7 @@ public class GatewayDropEmiRecipe implements EmiRecipe {
         }
 
         if (!spawns.isEmpty()) {
-            y = (int) Math.max(y, slotsStartY + Math.ceil((double) stacks.size() / itemColumns));
+            y = (int) Math.max(y, slotsStartY + Math.ceil((double) stacks.size() / itemColumns) * slotSize);
             widgets.addText(Component.translatable("gateways_to_emiloot.spawns"), 0, y, 0x404040, false);
             y += titleHeight;
             row = 0;
